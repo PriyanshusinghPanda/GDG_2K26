@@ -108,3 +108,47 @@
     padding: 0.5rem;
     font-size: 0.9rem;
 }
+
+/* New Sandbox Component Styles */
+.input-group {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.demo-input-small {
+    flex: 1;
+    padding: 0.5rem;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+}
+
+.add-btn {
+    padding: 0.5rem 1rem !important;
+}
+
+.sandbox-list {
+    text-align: left;
+    padding-left: 1.5rem;
+    margin: 0;
+}
+
+.sandbox-list li {
+    margin-bottom: 0.5rem;
+    color: var(--text-color);
+}
+
+.welcome-banner {
+    margin-top: 1rem;
+    padding: 1rem;
+    background: var(--primary);
+    color: white;
+    border-radius: 4px;
+    font-weight: bold;
+    animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+    from { transform: translateY(10px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
