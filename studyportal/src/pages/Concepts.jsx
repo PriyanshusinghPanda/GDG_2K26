@@ -10,38 +10,32 @@ import RegistrationForm from '../components/RegistrationForm';
 
 export default function Concepts() {
   return (
-    <Container style={{ padding: '4rem 0' }}>
+    <div style={{ padding: '4rem 2rem' }}>
       <h1 style={{ textAlign: 'center', marginBottom: '3rem' }}>Concept Sandbox</h1>
       
-      <p style={{ textAlign: 'center', color: '#94a3b8', marginBottom: '3rem' }}>
-        Today we learn how to break a big page into small, manageable <b>Components</b>.
-      </p>
-
-      <Grid>
-        <Card title="1. The Classic Counter" emoji="🔢">
+      <div style={{ 
+        display: 'grid', 
+        gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', 
+        gap: '1.5rem' 
+      }}>
+        {/* ✅ TASK: Build these 6 boxes! */}
+        <div style={{ padding: '1.5rem', border: '1px solid #334155', borderRadius: '12px' }}>
+          <h3>1. Counter</h3>
           <Counter />
-        </Card>
+        </div>
 
-        <Card title="2. Live Text Input" emoji="✍️">
+        <div style={{ padding: '1.5rem', border: '1px solid #334155', borderRadius: '12px' }}>
+          <h3>2. Text Input</h3>
           <TextInput />
-        </Card>
+        </div>
 
-        <Card title="3. The Light Switch" emoji="💡">
+        <div style={{ padding: '1.5rem', border: '1px solid #334155', borderRadius: '12px' }}>
+          <h3>3. Light Switch</h3>
           <LightSwitch />
-        </Card>
-
-        <Card title="4. Dynamic Styling" emoji="🎨">
-          <ColorPicker />
-        </Card>
-
-        <Card title="5. Learning List" emoji="🚀">
-           <SkillList />
-        </Card>
-
-        <Card title="6. Join the Bootcamp" emoji="⚡">
-           <RegistrationForm />
-        </Card>
-      </Grid>
-    </Container>
+        </div>
+        
+        {/* ... students will add more boxes here */}
+      </div>
+    </div>
   );
 }
