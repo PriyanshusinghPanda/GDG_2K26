@@ -27,6 +27,110 @@
     width: 100%;
     font-size: 1.1rem;
 }
+.quiz-input {
+    width: 100%;
+    padding: 0.8rem;
+    margin-bottom: 0.8rem;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    font-family: inherit;
+}
+.ghost-btn {
+    width: 100%;
+    margin-top: 0.6rem;
+    padding: 0.75rem 1rem;
+    background: #f8f9fa;
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+}
+.mini-btn {
+    width: auto;
+    font-size: 0.85rem;
+    padding: 0.45rem 0.6rem;
+}
+.auth-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+.dash-item {
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 0.6rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+.dash-item strong {
+    font-size: 1.1rem;
+}
+.dash-item span {
+    font-size: 0.8rem;
+    color: #5f6368;
+}
+.modes-row {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.5rem;
+    margin-bottom: 0.8rem;
+}
+.mode-btn {
+    padding: 0.6rem;
+    border: 1px solid var(--border-color);
+    background: white;
+    color: var(--text-color);
+}
+.mode-btn.active {
+    border-color: var(--primary);
+    background: #e8f0fe;
+}
+.controls-row {
+    display: grid;
+    grid-template-columns: 2fr 1fr 80px;
+    gap: 0.5rem;
+    margin-top: 0.8rem;
+}
+.types-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.35rem;
+    margin: 0.8rem 0;
+}
+.types-grid label {
+    display: flex;
+    gap: 0.35rem;
+    font-size: 0.9rem;
+}
+.history-list {
+    margin-top: 1rem;
+    display: grid;
+    gap: 0.45rem;
+}
+.history-item {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    gap: 0.6rem;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 0.45rem 0.6rem;
+    font-size: 0.85rem;
+}
+.error-text {
+    color: #c5221f;
+    margin: 0.25rem 0 0.75rem;
+}
+.timer-pill {
+    font-weight: 700;
+    color: #c5221f;
+}
 
 .quiz-header {
     display: flex;

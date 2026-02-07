@@ -1,46 +1,156 @@
-// QuizPortal.jsx — A pre-built component that uses Gemini API to generate a quiz from notes
-import { useState, useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import './QuizPortal.css';
 
-export default function QuizPortal() {
-  // State for the text input
-  const [topic, setTopic] = useState('');
-  
-  // State to track the current phase: 'idle', 'loading', 'quiz', 'results'
-  const [appState, setAppState] = useState('idle');
-  
-  // State to store the generated questions
-  const [questions, setQuestions] = useState([]);
-  
-  // State to track which question the user is currently answering
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  
-  // State to keep score
-  const [score, setScore] = useState(0);
+const STORAGE_USER_KEY = 'studyportal_user';
+const STORAGE_HISTORY_KEY = 'studyportal_quiz_history';
+const STORAGE_SHARED_KEY = 'studyportal_shared_quizzes';
 
-  // Check for Gemini API key on mount to demonstrate useEffect
+const QUESTION_TYPES = ['mcq', 'true_false', 'fill_blank', 'flashcard', 'short_answer'];
+
+const getToday = () => new Date().toISOString().slice(0, 10);
+
+const randomSeconds = () => Math.floor(Math.random() * 41) + 20;
+
+export default function QuizPortal() {
+  const [topic, setTopic] = useState('');
+  const [sourceMode, setSourceMode] = useState('text');
+  const [sourceUrl, setSourceUrl] = useState('');
+  const [uploadedFile, setUploadedFile] = useState(null);
+  const [difficulty, setDifficulty] = useState('medium');
+  const [questionCount, setQuestionCount] = useState(5);
+  const [subject, setSubject] = useState('General');
+  const [selectedTypes, setSelectedTypes] = useState(['mcq', 'true_false']);
+  const [appState, setAppState] = useState('idle');
+  const [questions, setQuestions] = useState([]);
+  const [answers, setAnswers] = useState({});
+  const [attemptWrongQuestions, setAttemptWrongQuestions] = useState([]);
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [score, setScore] = useState(0);
+  const [errorMsg, setErrorMsg] = useState('');
+  const [timeLeft, setTimeLeft] = useState(0);
+  const [timerSeed, setTimerSeed] = useState(randomSeconds());
+  const [user, setUser] = useState(null);
+  const [history, setHistory] = useState([]);
+  const [shareLink, setShareLink] = useState('');
+  const [searchParams] = useSearchParams();
+
   useEffect(() => {
     if (!import.meta.env.VITE_GEMINI_KEY) {
       console.warn('VITE_GEMINI_KEY is missing from environment variables');
     }
+    const savedUser = localStorage.getItem(STORAGE_USER_KEY);
+    const savedHistory = localStorage.getItem(STORAGE_HISTORY_KEY);
+    if (savedUser) {
+      setUser(JSON.parse(savedUser));
+    }
+    if (savedHistory) {
+      setHistory(JSON.parse(savedHistory));
+    }
   }, []);
 
-  // Function to handle fetching questions from the Gemini API
-  const generateQuiz = async () => {
-    // If input is empty, do not proceed
-    if (!topic.trim()) return;
-    
-    // Change state to loading to show a spinner to the user
-    setAppState('loading');
-    
-    // Get the API key from Vite environment variables
-    const apiKey = import.meta.env.VITE_GEMINI_KEY;
-    
-    // Define the exact prompt for Gemini
-    const prompt = `Generate 5 multiple choice questions based on this topic or text: ${topic}. Return only a JSON array in this format: [{"question": "string", "options": ["string", "string", "string", "string"], "answer": "string"}]`;
+  useEffect(() => {
+    if (appState !== 'quiz') return undefined;
+    if (timeLeft <= 0) {
+      handleAnswerClick('__timeout__');
+      return undefined;
+    }
+    const timer = setTimeout(() => setTimeLeft((prev) => prev - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [appState, timeLeft]);
 
+  useEffect(() => {
+    const sharedId = searchParams.get('shared');
+    if (!sharedId) return;
+    const raw = localStorage.getItem(STORAGE_SHARED_KEY);
+    if (!raw) return;
+    const sharedStore = JSON.parse(raw);
+    const sharedQuiz = sharedStore[sharedId];
+    if (!sharedQuiz) return;
+    setQuestions(sharedQuiz.questions || []);
+    setSubject(sharedQuiz.subject || 'Shared Quiz');
+    setScore(0);
+    setAnswers({});
+    setCurrentQuestionIndex(0);
+    setErrorMsg('');
+    setTimerSeed(randomSeconds());
+    setTimeLeft(randomSeconds());
+    setAppState('quiz');
+  }, [searchParams]);
+
+  const streak = useMemo(() => {
+    if (!history.length) return 0;
+    const days = [...new Set(history.map((item) => item.date))].sort().reverse();
+    let count = 0;
+    let cursor = new Date();
+    for (let i = 0; i < days.length; i += 1) {
+      const check = new Date(cursor);
+      check.setDate(cursor.getDate() - i);
+      if (days[i] === check.toISOString().slice(0, 10)) count += 1;
+      else break;
+    }
+    return count;
+  }, [history]);
+
+  const parseFileContent = async (file) => {
+    if (!file) return '';
+    if (file.type.includes('text') || file.name.endsWith('.md')) {
+      return file.text();
+    }
+    if (file.type === 'application/pdf') {
+      const bytes = await file.arrayBuffer();
+      const decoder = new TextDecoder('latin1');
+      const raw = decoder.decode(bytes);
+      return raw.replace(/[^\x20-\x7E\n]/g, ' ').slice(0, 10000);
+    }
+    if (file.type.startsWith('image/')) {
+      return `Image notes uploaded: ${file.name}. Build questions from typical concepts likely present in this kind of study image and keep assumptions explicit.`;
+    }
+    return `Uploaded file: ${file.name}`;
+  };
+
+  const composeSourceText = async () => {
+    if (sourceMode === 'text') return topic.trim();
+    if (sourceMode === 'url') return `Study from this source URL: ${sourceUrl.trim()}`;
+    if (sourceMode === 'youtube') return `Study from this YouTube link and likely transcript context: ${sourceUrl.trim()}`;
+    if (sourceMode === 'file') return parseFileContent(uploadedFile);
+    return topic.trim();
+  };
+
+  const generateQuiz = async (overrideQuestions = null) => {
+    if (!user) {
+      setErrorMsg('Sign in first to save and track your quizzes.');
+      return;
+    }
+    setErrorMsg('');
+    setAppState('loading');
+    const apiKey = import.meta.env.VITE_GEMINI_KEY;
     try {
-      // Send a POST request to the Gemini API
+      let parsedQuestions = overrideQuestions;
+      if (!parsedQuestions) {
+        const sourceText = await composeSourceText();
+        if (!sourceText) {
+          setAppState('idle');
+          setErrorMsg('Add notes, URL, or a file first.');
+          return;
+        }
+        const prompt = `You are a quiz generator.
+Create ${questionCount} ${difficulty} questions from this study source:
+${sourceText}
+
+Question types allowed: ${selectedTypes.join(', ')}.
+Return ONLY valid JSON array.
+Each item format:
+{
+  "id": "short-unique-id",
+  "type": "mcq|true_false|fill_blank|flashcard|short_answer",
+  "question": "string",
+  "options": ["..."] (required only for mcq),
+  "answer": "string"
+}
+For true_false answer must be exactly "True" or "False".
+Keep language concise and student friendly.`;
+
       const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -48,86 +158,213 @@ export default function QuizPortal() {
           contents: [{ parts: [{ text: prompt }] }]
         })
       });
-
-      // Parse the JSON response from the fetch call
       const data = await response.json();
-      
-      // Extract the text content from Gemini's response structure
       const textResponse = data.candidates[0].content.parts[0].text;
-      
-      // Clean up the text response by removing markdown blocks if present
       const cleanJson = textResponse.replace(/```json/g, '').replace(/```/g, '').trim();
-      
-      // Convert the string into an actual JavaScript array of objects
-      const parsedQuestions = JSON.parse(cleanJson);
-      
-      // Save the freshly generated questions into state
+        parsedQuestions = JSON.parse(cleanJson);
+      }
+
       setQuestions(parsedQuestions);
-      
-      // Reset score and question index for a new game
       setScore(0);
+      setAnswers({});
       setCurrentQuestionIndex(0);
-      
-      // Change the state to start the quiz!
+      const seed = randomSeconds();
+      setTimerSeed(seed);
+      setTimeLeft(seed);
       setAppState('quiz');
-      
     } catch (error) {
-      // If there's an error, log it and return to the idle screen
       console.error('Error generating quiz:', error);
-      alert('Failed to generate quiz. Check API key and console.');
+      setErrorMsg('Failed to generate quiz. Check API key and try again.');
       setAppState('idle');
     }
   };
 
-  // Function to handle an option click
   const handleAnswerClick = (selectedOption) => {
-    // Check if the selected option matches the correct answer
-    const isCorrect = selectedOption === questions[currentQuestionIndex].answer;
-    
-    // Add 1 to the score if correct
+    const currentQuestion = questions[currentQuestionIndex];
+    const isCorrect = selectedOption === currentQuestion.answer;
+    setAnswers((prev) => ({ ...prev, [currentQuestion.id || currentQuestionIndex]: selectedOption }));
     if (isCorrect) {
-      setScore(score + 1);
+      setScore((prev) => prev + 1);
+    } else {
+      setAttemptWrongQuestions((prev) => [...prev, currentQuestion]);
     }
-    
-    // Calculate the next question index
     const nextQuestion = currentQuestionIndex + 1;
-    
-    // If there are more questions, go to the next one
     if (nextQuestion < questions.length) {
       setCurrentQuestionIndex(nextQuestion);
+      setTimeLeft(randomSeconds());
     } else {
-      // Otherwise, we are done! Show the results screen.
+      saveQuizResult(isCorrect ? [] : [currentQuestion]);
       setAppState('results');
     }
   };
 
-  // Function to reset everything and start over
+  const saveQuizResult = (lastWrongChunk = []) => {
+    const allWrong = [...attemptWrongQuestions, ...lastWrongChunk];
+    const record = {
+      id: crypto.randomUUID(),
+      userEmail: user.email,
+      subject,
+      sourceMode,
+      difficulty,
+      questionCount: questions.length,
+      score,
+      wrongQuestionIds: allWrong.map((q, idx) => q.id || `w-${idx}`),
+      wrongQuestions: allWrong,
+      questions,
+      date: getToday(),
+      createdAt: new Date().toISOString()
+    };
+    const nextHistory = [record, ...history];
+    setHistory(nextHistory);
+    localStorage.setItem(STORAGE_HISTORY_KEY, JSON.stringify(nextHistory));
+  };
+
+  const startRetryWeakAreas = () => {
+    const myAttempts = history.filter((item) => item.userEmail === user?.email);
+    const latestWithWrong = myAttempts.find((item) => (item.wrongQuestions || []).length > 0);
+    if (!latestWithWrong) {
+      setErrorMsg('No weak-area questions found yet.');
+      return;
+    }
+    setAttemptWrongQuestions([]);
+    generateQuiz(latestWithWrong.wrongQuestions);
+  };
+
+  const signIn = () => {
+    const email = window.prompt('Enter your Google email');
+    if (!email) return;
+    const newUser = {
+      name: email.split('@')[0],
+      email
+    };
+    setUser(newUser);
+    localStorage.setItem(STORAGE_USER_KEY, JSON.stringify(newUser));
+  };
+
+  const signOut = () => {
+    setUser(null);
+    localStorage.removeItem(STORAGE_USER_KEY);
+  };
+
+  const createShareLink = () => {
+    const id = crypto.randomUUID();
+    const raw = localStorage.getItem(STORAGE_SHARED_KEY);
+    const store = raw ? JSON.parse(raw) : {};
+    store[id] = {
+      questions,
+      subject,
+      createdAt: new Date().toISOString()
+    };
+    localStorage.setItem(STORAGE_SHARED_KEY, JSON.stringify(store));
+    const link = `${window.location.origin}/quiz?shared=${id}`;
+    setShareLink(link);
+  };
+
   const resetQuiz = () => {
-    setTopic('');
     setScore(0);
+    setAnswers({});
+    setAttemptWrongQuestions([]);
     setCurrentQuestionIndex(0);
     setQuestions([]);
+    setTimeLeft(0);
     setAppState('idle');
   };
 
-  // Render the initial input screen
   if (appState === 'idle') {
+    const userHistory = history.filter((item) => item.userEmail === user?.email);
     return (
       <div className="quiz-container">
-        <h2>Generate a Quiz</h2>
-        <p>Paste your notes or type a topic below:</p>
-        <textarea 
-          placeholder="e.g. Photosynthesis, variables in JavaScript, etc."
-          value={topic}
-          onChange={(e) => setTopic(e.target.value)}
-          className="quiz-textarea"
-        />
-        <button onClick={generateQuiz} className="quiz-btn">Generate Questions</button>
+        <div className="auth-row">
+          <h2>Quiz Studio</h2>
+          {user ? (
+            <button onClick={signOut} className="mini-btn">Sign out ({user.name})</button>
+          ) : (
+            <button onClick={signIn} className="mini-btn">Sign in with Google</button>
+          )}
+        </div>
+        <div className="dashboard-grid">
+          <div className="dash-item"><strong>{userHistory.length}</strong><span>Saved quizzes</span></div>
+          <div className="dash-item"><strong>{streak}</strong><span>Day streak</span></div>
+          <div className="dash-item"><strong>{Math.round((userHistory.reduce((acc, q) => acc + (q.score / q.questionCount) * 100, 0) / (userHistory.length || 1)) || 0)}%</strong><span>Avg score</span></div>
+        </div>
+        <div className="modes-row">
+          {['text', 'url', 'youtube', 'file'].map((mode) => (
+            <button key={mode} className={sourceMode === mode ? 'mode-btn active' : 'mode-btn'} onClick={() => setSourceMode(mode)}>
+              {mode}
+            </button>
+          ))}
+        </div>
+        {sourceMode === 'text' && (
+          <textarea
+            placeholder="Paste notes..."
+            value={topic}
+            onChange={(e) => setTopic(e.target.value)}
+            className="quiz-textarea"
+          />
+        )}
+        {(sourceMode === 'url' || sourceMode === 'youtube') && (
+          <input
+            type="url"
+            placeholder={sourceMode === 'youtube' ? 'Paste YouTube link' : 'Paste article URL'}
+            value={sourceUrl}
+            onChange={(e) => setSourceUrl(e.target.value)}
+            className="quiz-input"
+          />
+        )}
+        {sourceMode === 'file' && (
+          <input
+            type="file"
+            accept=".pdf,.txt,.md,image/*"
+            onChange={(e) => setUploadedFile(e.target.files?.[0] || null)}
+            className="quiz-input"
+          />
+        )}
+        <div className="controls-row">
+          <input className="quiz-input" value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="Subject folder (e.g. Physics)" />
+          <select className="quiz-input" value={difficulty} onChange={(e) => setDifficulty(e.target.value)}>
+            <option value="easy">Easy</option>
+            <option value="medium">Medium</option>
+            <option value="hard">Hard</option>
+          </select>
+          <input
+            className="quiz-input"
+            type="number"
+            min={3}
+            max={20}
+            value={questionCount}
+            onChange={(e) => setQuestionCount(Number(e.target.value) || 5)}
+          />
+        </div>
+        <div className="types-grid">
+          {QUESTION_TYPES.map((type) => (
+            <label key={type}>
+              <input
+                type="checkbox"
+                checked={selectedTypes.includes(type)}
+                onChange={() => setSelectedTypes((prev) => (
+                  prev.includes(type) ? prev.filter((t) => t !== type) : [...prev, type]
+                ))}
+              />
+              {type}
+            </label>
+          ))}
+        </div>
+        {!!errorMsg && <p className="error-text">{errorMsg}</p>}
+        <button onClick={() => generateQuiz()} className="quiz-btn">Generate Quiz</button>
+        <button onClick={startRetryWeakAreas} className="ghost-btn">Retry Weak Areas</button>
+        <div className="history-list">
+          {userHistory.slice(0, 4).map((item) => (
+            <div key={item.id} className="history-item">
+              <span>{item.subject}</span>
+              <span>{item.score}/{item.questionCount}</span>
+              <span>{item.date}</span>
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
 
-  // Render a loading spinner screen
   if (appState === 'loading') {
     return (
       <div className="quiz-container text-center">
@@ -138,48 +375,63 @@ export default function QuizPortal() {
     );
   }
 
-  // Render the quiz question screen
   if (appState === 'quiz') {
-    // Get the data for the current question
     const currentQ = questions[currentQuestionIndex];
+    const isMcq = currentQ.type === 'mcq';
+    const isTrueFalse = currentQ.type === 'true_false';
     
     return (
       <div className="quiz-container">
         <div className="quiz-header">
           <span>Question {currentQuestionIndex + 1} of {questions.length}</span>
           <span>Score: {score}</span>
+          <span className="timer-pill">Time: {timeLeft}s</span>
         </div>
         
         <h3 className="question-text">{currentQ.question}</h3>
-        
         <div className="options-container">
-          {/* Map through the options array to render buttons */}
-          {currentQ.options.map((option, index) => (
-            <button 
-              /* The key prop is required by React to identify which items have changed, been added or removed */
-              key={index} 
-              onClick={() => handleAnswerClick(option)}
-              className="option-btn"
-            >
-              {option}
-            </button>
+          {isMcq && (currentQ.options || []).map((option, index) => (
+            <button key={index} onClick={() => handleAnswerClick(option)} className="option-btn">{option}</button>
           ))}
+          {isTrueFalse && (
+            <>
+              <button onClick={() => handleAnswerClick('True')} className="option-btn">True</button>
+              <button onClick={() => handleAnswerClick('False')} className="option-btn">False</button>
+            </>
+          )}
+          {!isMcq && !isTrueFalse && (
+            <div>
+              <input
+                className="quiz-input"
+                placeholder="Type your answer..."
+                value={answers[currentQ.id || currentQuestionIndex] || ''}
+                onChange={(e) => setAnswers((prev) => ({ ...prev, [currentQ.id || currentQuestionIndex]: e.target.value }))}
+              />
+              <button
+                className="quiz-btn"
+                onClick={() => handleAnswerClick(answers[currentQ.id || currentQuestionIndex] || '')}
+              >
+                Submit Answer
+              </button>
+            </div>
+          )}
         </div>
       </div>
     );
   }
 
-  // Render the final results screen
   if (appState === 'results') {
     return (
       <div className="quiz-container text-center">
         <h2>Quiz Complete!</h2>
         <p className="score-text">You scored {score} out of {questions.length}</p>
+        <p>Random timer was active ({timerSeed}s start, resets each question).</p>
+        <button onClick={createShareLink} className="ghost-btn">Create Share Link</button>
+        {shareLink && <p><a href={shareLink}>{shareLink}</a></p>}
         <button onClick={resetQuiz} className="quiz-btn">Try Again</button>
       </div>
     );
   }
 
-  // Fallback return just in case
   return null;
 }
