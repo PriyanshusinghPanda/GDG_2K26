@@ -11,6 +11,7 @@ const QUESTION_TYPES = ['mcq', 'true_false', 'fill_blank', 'flashcard', 'short_a
 const getToday = () => new Date().toISOString().slice(0, 10);
 
 const randomSeconds = () => Math.floor(Math.random() * 41) + 20;
+const normalizeAnswer = (value) => String(value || '').trim().toLowerCase();
 
 export default function QuizPortal() {
   const [topic, setTopic] = useState('');
@@ -181,7 +182,7 @@ Keep language concise and student friendly.`;
 
   const handleAnswerClick = (selectedOption) => {
     const currentQuestion = questions[currentQuestionIndex];
-    const isCorrect = selectedOption === currentQuestion.answer;
+    const isCorrect = normalizeAnswer(selectedOption) === normalizeAnswer(currentQuestion.answer);
     setAnswers((prev) => ({ ...prev, [currentQuestion.id || currentQuestionIndex]: selectedOption }));
     if (isCorrect) {
       setScore((prev) => prev + 1);
