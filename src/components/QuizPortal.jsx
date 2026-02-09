@@ -123,6 +123,10 @@ export default function QuizPortal() {
       setErrorMsg('Sign in first to save and track your quizzes.');
       return;
     }
+    if (!selectedTypes.length) {
+      setErrorMsg('Select at least one question type.');
+      return;
+    }
     setErrorMsg('');
     setAppState('loading');
     const apiKey = import.meta.env.VITE_GEMINI_KEY;
