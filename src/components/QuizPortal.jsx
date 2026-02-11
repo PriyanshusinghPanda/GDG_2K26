@@ -74,8 +74,9 @@ export default function QuizPortal() {
     setAnswers({});
     setCurrentQuestionIndex(0);
     setErrorMsg('');
-    setTimerSeed(randomSeconds());
-    setTimeLeft(randomSeconds());
+    const seed = randomSeconds();
+    setTimerSeed(seed);
+    setTimeLeft(seed);
     setAppState('quiz');
   }, [searchParams]);
 
