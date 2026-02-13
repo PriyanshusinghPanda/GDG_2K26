@@ -12,6 +12,7 @@ const getToday = () => new Date().toISOString().slice(0, 10);
 
 const randomSeconds = () => Math.floor(Math.random() * 41) + 20;
 const normalizeAnswer = (value) => String(value || '').trim().toLowerCase();
+const formatDate = (dateValue) => new Date(dateValue).toLocaleDateString();
 
 export default function QuizPortal() {
   const [topic, setTopic] = useState('');
@@ -363,7 +364,7 @@ Keep language concise and student friendly.`;
             <div key={item.id} className="history-item">
               <span>{item.subject}</span>
               <span>{item.score}/{item.questionCount}</span>
-              <span>{item.date}</span>
+              <span>{formatDate(item.createdAt || item.date)}</span>
             </div>
           ))}
         </div>
