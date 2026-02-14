@@ -267,6 +267,16 @@ Keep language concise and student friendly.`;
     setShareLink(link);
   };
 
+  const copyShareLink = async () => {
+    if (!shareLink) return;
+    try {
+      await navigator.clipboard.writeText(shareLink);
+      setErrorMsg('Share link copied.');
+    } catch {
+      setErrorMsg('Could not copy link. Copy manually.');
+    }
+  };
+
   const resetQuiz = () => {
     setScore(0);
     setAnswers({});
@@ -435,6 +445,7 @@ Keep language concise and student friendly.`;
         <p>Random timer was active ({timerSeed}s start, resets each question).</p>
         <button onClick={createShareLink} className="ghost-btn">Create Share Link</button>
         {shareLink && <p><a href={shareLink}>{shareLink}</a></p>}
+        {shareLink && <button onClick={copyShareLink} className="ghost-btn">Copy Link</button>}
         <button onClick={resetQuiz} className="quiz-btn">Try Again</button>
       </div>
     );
