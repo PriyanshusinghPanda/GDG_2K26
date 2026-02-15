@@ -5,6 +5,7 @@ import './QuizPortal.css';
 const STORAGE_USER_KEY = 'studyportal_user';
 const STORAGE_HISTORY_KEY = 'studyportal_quiz_history';
 const STORAGE_SHARED_KEY = 'studyportal_shared_quizzes';
+const STORAGE_PREFS_KEY = 'studyportal_quiz_prefs';
 
 const QUESTION_TYPES = ['mcq', 'true_false', 'fill_blank', 'flashcard', 'short_answer'];
 
@@ -43,13 +44,26 @@ export default function QuizPortal() {
     }
     const savedUser = localStorage.getItem(STORAGE_USER_KEY);
     const savedHistory = localStorage.getItem(STORAGE_HISTORY_KEY);
+    const savedPrefs = localStorage.getItem(STORAGE_PREFS_KEY);
     if (savedUser) {
       setUser(JSON.parse(savedUser));
     }
     if (savedHistory) {
       setHistory(JSON.parse(savedHistory));
     }
+    if (savedPrefs) {
+      const prefs = JSON.parse(savedPrefs);
+      setDifficulty(prefs.difficulty || 'medium');
+      setQuestionCount(prefs.questionCount || 5);
+      setSubject(prefs.subject || 'General');
+      setSelectedTypes(Array.isArray(prefs.selectedTypes) && prefs.selectedTypes.length ? prefs.selectedTypes : ['mcq']);
+    }
   }, []);
+
+  useEffect(() => {
+    const prefs = { difficulty, questionCount, subject, selectedTypes };
+    localStorage.setItem(STORAGE_PREFS_KEY, JSON.stringify(prefs));
+  }, [difficulty, questionCount, subject, selectedTypes]);
 
   useEffect(() => {
     if (appState !== 'quiz') return undefined;
