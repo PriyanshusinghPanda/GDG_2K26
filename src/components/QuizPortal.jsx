@@ -9,7 +9,13 @@ const STORAGE_PREFS_KEY = 'studyportal_quiz_prefs';
 
 const QUESTION_TYPES = ['mcq', 'true_false', 'fill_blank', 'flashcard', 'short_answer'];
 
-const getToday = () => new Date().toISOString().slice(0, 10);
+const getToday = () => {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, '0');
+  const d = String(now.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+};
 
 const randomSeconds = () => Math.floor(Math.random() * 41) + 20;
 const normalizeAnswer = (value) => String(value || '').trim().toLowerCase();
