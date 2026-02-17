@@ -187,8 +187,11 @@ Keep language concise and student friendly.`;
       });
       const data = await response.json();
       const textResponse = data.candidates[0].content.parts[0].text;
-      const cleanJson = textResponse.replace(/```json/g, '').replace(/```/g, '').trim();
+        const cleanJson = textResponse.replace(/```json/g, '').replace(/```/g, '').trim();
         parsedQuestions = JSON.parse(cleanJson);
+        if (!Array.isArray(parsedQuestions) || !parsedQuestions.length) {
+          throw new Error('Empty quiz response');
+        }
       }
 
       setQuestions(parsedQuestions);
