@@ -132,6 +132,21 @@
     color: #c5221f;
 }
 
+@media (max-width: 640px) {
+    .dashboard-grid {
+        grid-template-columns: 1fr;
+    }
+    .modes-row {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .controls-row {
+        grid-template-columns: 1fr;
+    }
+    .history-item {
+        grid-template-columns: 1fr;
+    }
+}
+
 .quiz-header {
     display: flex;
     justify-content: space-between;
