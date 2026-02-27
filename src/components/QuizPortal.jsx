@@ -66,7 +66,14 @@ export default function QuizPortal() {
   const [timerSeed, setTimerSeed] = useState(randomSeconds());
   const [user, setUser] = useState(null);
   const [history, setHistory] = useState([]);
+  const [reviewCards, setReviewCards] = useState([]);
   const [shareLink, setShareLink] = useState('');
+  const [activePanel, setActivePanel] = useState('studio');
+  const [classrooms, setClassrooms] = useState([]);
+  const [classroomCode, setClassroomCode] = useState('');
+  const [studentName, setStudentName] = useState('');
+  const [activeClassroom, setActiveClassroom] = useState(null);
+  const [shareAttempts, setShareAttempts] = useState({});
   const [searchParams] = useSearchParams();
 
   useEffect(() => {
