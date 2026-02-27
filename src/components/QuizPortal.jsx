@@ -6,6 +6,9 @@ const STORAGE_USER_KEY = 'studyportal_user';
 const STORAGE_HISTORY_KEY = 'studyportal_quiz_history';
 const STORAGE_SHARED_KEY = 'studyportal_shared_quizzes';
 const STORAGE_PREFS_KEY = 'studyportal_quiz_prefs';
+const STORAGE_REVIEW_KEY = 'studyportal_review_cards';
+const STORAGE_CLASSROOM_KEY = 'studyportal_classrooms';
+const STORAGE_SHARE_ATTEMPTS_KEY = 'studyportal_share_attempts';
 
 const QUESTION_TYPES = ['mcq', 'true_false', 'fill_blank', 'flashcard', 'short_answer'];
 
@@ -20,6 +23,28 @@ const getToday = () => {
 const randomSeconds = () => Math.floor(Math.random() * 41) + 20;
 const normalizeAnswer = (value) => String(value || '').trim().toLowerCase();
 const formatDate = (dateValue) => new Date(dateValue).toLocaleDateString();
+const buildCardId = (question, subject, idx) => `${subject}::${question.id || idx}::${normalizeAnswer(question.question)}`;
+
+const computeNextReview = (card, rating) => {
+  const easeByRating = { again: -0.2, hard: -0.05, good: 0.1, easy: 0.2 };
+  const dayByRating = { again: 1, hard: 2, good: 4, easy: 7 };
+  const prevEase = card.ease || 2.5;
+  const nextEase = Math.max(1.3, prevEase + easeByRating[rating]);
+  const prevInterval = card.intervalDays || 1;
+  const nextInterval = rating === 'again'
+    ? dayByRating[rating]
+    : Math.max(dayByRating[rating], Math.round(prevInterval * nextEase));
+  const due = new Date();
+  due.setDate(due.getDate() + nextInterval);
+  return {
+    ...card,
+    ease: Number(nextEase.toFixed(2)),
+    intervalDays: nextInterval,
+    dueDate: due.toISOString(),
+    lastRating: rating,
+    reviewCount: (card.reviewCount || 0) + 1
+  };
+};
 
 export default function QuizPortal() {
   const [topic, setTopic] = useState('');
