@@ -83,11 +83,23 @@ export default function QuizPortal() {
     const savedUser = localStorage.getItem(STORAGE_USER_KEY);
     const savedHistory = localStorage.getItem(STORAGE_HISTORY_KEY);
     const savedPrefs = localStorage.getItem(STORAGE_PREFS_KEY);
+    const savedReview = localStorage.getItem(STORAGE_REVIEW_KEY);
+    const savedClassrooms = localStorage.getItem(STORAGE_CLASSROOM_KEY);
+    const savedAttempts = localStorage.getItem(STORAGE_SHARE_ATTEMPTS_KEY);
     if (savedUser) {
       setUser(JSON.parse(savedUser));
     }
     if (savedHistory) {
       setHistory(JSON.parse(savedHistory));
+    }
+    if (savedReview) {
+      setReviewCards(JSON.parse(savedReview));
+    }
+    if (savedClassrooms) {
+      setClassrooms(JSON.parse(savedClassrooms));
+    }
+    if (savedAttempts) {
+      setShareAttempts(JSON.parse(savedAttempts));
     }
     if (savedPrefs) {
       const prefs = JSON.parse(savedPrefs);
@@ -102,6 +114,18 @@ export default function QuizPortal() {
     const prefs = { difficulty, questionCount, subject, selectedTypes };
     localStorage.setItem(STORAGE_PREFS_KEY, JSON.stringify(prefs));
   }, [difficulty, questionCount, subject, selectedTypes]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_REVIEW_KEY, JSON.stringify(reviewCards));
+  }, [reviewCards]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_CLASSROOM_KEY, JSON.stringify(classrooms));
+  }, [classrooms]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_SHARE_ATTEMPTS_KEY, JSON.stringify(shareAttempts));
+  }, [shareAttempts]);
 
   useEffect(() => {
     if (appState !== 'quiz') return undefined;
