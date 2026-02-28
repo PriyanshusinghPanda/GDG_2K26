@@ -208,28 +208,28 @@ export default function QuizPortal() {
     return count;
   }, [history]);
 
-  const parseFileContent = async (file) => {
+  const parseFileContent = async (file, apiKey) => {
     if (!file) return '';
     if (file.type.includes('text') || file.name.endsWith('.md')) {
       return file.text();
     }
-    if (file.type === 'application/pdf') {
-      const bytes = await file.arrayBuffer();
-      const decoder = new TextDecoder('latin1');
-      const raw = decoder.decode(bytes);
-      return raw.replace(/[^\x20-\x7E\n]/g, ' ').slice(0, 10000);
-    }
-    if (file.type.startsWith('image/')) {
-      return `Image notes uploaded: ${file.name}. Build questions from typical concepts likely present in this kind of study image and keep assumptions explicit.`;
+    if (file.type === 'application/pdf' || file.type.startsWith('image/')) {
+      const parsed = await parseWithGeminiDocument(file, apiKey);
+      return `Title: ${parsed.title}
+Summary: ${parsed.summary}
+Headings: ${(parsed.headings || []).join(', ')}
+Key Terms: ${(parsed.keyTerms || []).join(', ')}
+Facts:
+${(parsed.facts || []).map((fact, idx) => `${idx + 1}. ${fact}`).join('\n')}`;
     }
     return `Uploaded file: ${file.name}`;
   };
 
-  const composeSourceText = async () => {
+  const composeSourceText = async (apiKey) => {
     if (sourceMode === 'text') return topic.trim();
     if (sourceMode === 'url') return `Study from this source URL: ${sourceUrl.trim()}`;
     if (sourceMode === 'youtube') return `Study from this YouTube link and likely transcript context: ${sourceUrl.trim()}`;
-    if (sourceMode === 'file') return parseFileContent(uploadedFile);
+    if (sourceMode === 'file') return parseFileContent(uploadedFile, apiKey);
     return topic.trim();
   };
 
@@ -248,7 +248,7 @@ export default function QuizPortal() {
     try {
       let parsedQuestions = overrideQuestions;
       if (!parsedQuestions) {
-        const sourceText = await composeSourceText();
+        const sourceText = await composeSourceText(apiKey);
         if (!sourceText) {
           setAppState('idle');
           setErrorMsg('Add notes, URL, or a file first.');
