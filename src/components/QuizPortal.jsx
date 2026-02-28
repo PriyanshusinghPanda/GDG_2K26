@@ -46,6 +46,43 @@ const computeNextReview = (card, rating) => {
   };
 };
 
+const parseWithGeminiDocument = async (file, apiKey) => {
+  const rawBytes = await file.arrayBuffer();
+  const base64Data = btoa(
+    Array.from(new Uint8Array(rawBytes))
+      .map((byte) => String.fromCharCode(byte))
+      .join('')
+  );
+
+  const prompt = `Extract study-ready content from this file and return ONLY JSON:
+{
+  "title": "string",
+  "summary": "short paragraph",
+  "headings": ["string"],
+  "keyTerms": ["string"],
+  "facts": ["string"]
+}
+Make it faithful to source text.`;
+
+  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      contents: [{
+        parts: [
+          { text: prompt },
+          { inlineData: { mimeType: file.type || 'application/octet-stream', data: base64Data } }
+        ]
+      }]
+    })
+  });
+
+  const data = await response.json();
+  const textResponse = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+  const cleanJson = textResponse.replace(/```json/g, '').replace(/```/g, '').trim();
+  return JSON.parse(cleanJson);
+};
+
 export default function QuizPortal() {
   const [topic, setTopic] = useState('');
   const [sourceMode, setSourceMode] = useState('text');
