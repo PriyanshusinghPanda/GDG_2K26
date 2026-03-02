@@ -208,6 +208,37 @@ export default function QuizPortal() {
     return count;
   }, [history]);
 
+  const dueReviewCards = useMemo(() => {
+    const now = new Date();
+    return reviewCards
+      .filter((card) => new Date(card.dueDate) <= now)
+      .sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
+  }, [reviewCards]);
+
+  const weakTopicStats = useMemo(() => {
+    const stats = {};
+    const myAttempts = history.filter((item) => item.userEmail === user?.email);
+    myAttempts.forEach((attempt) => {
+      (attempt.wrongQuestions || []).forEach((q) => {
+        const base = `${attempt.subject || 'General'} / ${q.type || 'mcq'}`;
+        if (!stats[base]) {
+          stats[base] = { topic: base, wrongCount: 0, totalSeen: 0 };
+        }
+        stats[base].wrongCount += 1;
+      });
+      (attempt.questions || []).forEach((q) => {
+        const base = `${attempt.subject || 'General'} / ${q.type || 'mcq'}`;
+        if (!stats[base]) {
+          stats[base] = { topic: base, wrongCount: 0, totalSeen: 0 };
+        }
+        stats[base].totalSeen += 1;
+      });
+    });
+    return Object.values(stats)
+      .map((item) => ({ ...item, missRate: item.totalSeen ? (item.wrongCount / item.totalSeen) : 0 }))
+      .sort((a, b) => b.missRate - a.missRate);
+  }, [history, user]);
+
   const parseFileContent = async (file, apiKey) => {
     if (!file) return '';
     if (file.type.includes('text') || file.name.endsWith('.md')) {
