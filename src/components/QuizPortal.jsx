@@ -348,6 +348,10 @@ Keep language concise and student friendly.`;
       setTimeLeft(randomSeconds());
     } else {
       saveQuizResult(isCorrect ? [] : [currentQuestion]);
+      if (activePanel === 'classroom') {
+        const finalScore = isCorrect ? score + 1 : score;
+        submitClassroomAttempt(finalScore);
+      }
       setAppState('results');
     }
   };
@@ -451,6 +455,72 @@ Keep language concise and student friendly.`;
     localStorage.setItem(STORAGE_SHARED_KEY, JSON.stringify(store));
     const link = `${window.location.origin}/quiz?shared=${id}`;
     setShareLink(link);
+  };
+
+  const createClassroom = () => {
+    if (!questions.length) {
+      setErrorMsg('Generate a quiz first, then create a classroom.');
+      return;
+    }
+    const code = Math.random().toString(36).slice(2, 8).toUpperCase();
+    const room = {
+      code,
+      teacher: user?.email || 'teacher@local',
+      subject,
+      questions,
+      createdAt: new Date().toISOString(),
+      attempts: []
+    };
+    setClassrooms((prev) => [room, ...prev]);
+    setActiveClassroom(room);
+    setClassroomCode(code);
+  };
+
+  const joinClassroom = () => {
+    const room = classrooms.find((c) => c.code === classroomCode.trim().toUpperCase());
+    if (!room) {
+      setErrorMsg('Classroom code not found.');
+      return;
+    }
+    setActiveClassroom(room);
+    setQuestions(room.questions);
+    setScore(0);
+    setCurrentQuestionIndex(0);
+    setAppState('quiz');
+    setActivePanel('classroom');
+  };
+
+  const submitClassroomAttempt = (finalScore) => {
+    if (!activeClassroom) return;
+    const name = studentName || user?.name || 'Student';
+    const entry = {
+      id: crypto.randomUUID(),
+      name,
+      score: finalScore,
+      total: questions.length,
+      at: new Date().toISOString()
+    };
+    setClassrooms((prev) => prev.map((room) => (
+      room.code === activeClassroom.code
+        ? { ...room, attempts: [...room.attempts, entry] }
+        : room
+    )));
+  };
+
+  const exportClassroomCsv = () => {
+    if (!activeClassroom) return;
+    const room = classrooms.find((c) => c.code === activeClassroom.code) || activeClassroom;
+    const header = 'name,score,total,time\n';
+    const rows = (room.attempts || []).map((a) => `${a.name},${a.score},${a.total},${new Date(a.at).toISOString()}`).join('\n');
+    const blob = new Blob([header + rows], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `classroom-${room.code}-report.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
   };
 
   const copyShareLink = async () => {
