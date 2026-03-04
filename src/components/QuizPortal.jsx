@@ -371,6 +371,45 @@ Keep language concise and student friendly.`;
     const nextHistory = [record, ...history];
     setHistory(nextHistory);
     localStorage.setItem(STORAGE_HISTORY_KEY, JSON.stringify(nextHistory));
+
+    const nextCards = [...reviewCards];
+    questions.forEach((question, idx) => {
+      const cardId = buildCardId(question, subject, idx);
+      const existingIndex = nextCards.findIndex((card) => card.id === cardId);
+      const wrong = allWrong.some((w) => buildCardId(w, subject, idx) === cardId);
+      const seedCard = existingIndex >= 0 ? nextCards[existingIndex] : {
+        id: cardId,
+        subject,
+        question,
+        ease: 2.5,
+        intervalDays: 1,
+        dueDate: new Date().toISOString(),
+        reviewCount: 0
+      };
+      const updated = computeNextReview(seedCard, wrong ? 'again' : 'good');
+      if (existingIndex >= 0) nextCards[existingIndex] = updated;
+      else nextCards.push(updated);
+    });
+    setReviewCards(nextCards);
+  };
+
+  const rateReviewCard = (cardId, rating) => {
+    setReviewCards((prev) => prev.map((card) => (
+      card.id === cardId ? computeNextReview(card, rating) : card
+    )));
+  };
+
+  const startDueReviewSession = () => {
+    if (!dueReviewCards.length) {
+      setErrorMsg('No review cards due today.');
+      return;
+    }
+    const reviewQuestions = dueReviewCards.slice(0, 10).map((card, idx) => ({
+      ...card.question,
+      id: `${card.id}::${idx}`
+    }));
+    setAttemptWrongQuestions([]);
+    generateQuiz(reviewQuestions);
   };
 
   const startRetryWeakAreas = () => {
