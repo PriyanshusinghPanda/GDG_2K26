@@ -194,6 +194,16 @@ export default function QuizPortal() {
     setAppState('quiz');
   }, [searchParams]);
 
+  useEffect(() => {
+    const code = searchParams.get('classroom');
+    if (!code) return;
+    const room = classrooms.find((c) => c.code === code.toUpperCase());
+    if (!room) return;
+    setActiveClassroom(room);
+    setClassroomCode(room.code);
+    setActivePanel('classroom');
+  }, [searchParams, classrooms]);
+
   const streak = useMemo(() => {
     if (!history.length) return 0;
     const days = [...new Set(history.map((item) => item.date))].sort().reverse();
@@ -347,10 +357,14 @@ Keep language concise and student friendly.`;
       setCurrentQuestionIndex(nextQuestion);
       setTimeLeft(randomSeconds());
     } else {
+      const finalScore = isCorrect ? score + 1 : score;
       saveQuizResult(isCorrect ? [] : [currentQuestion]);
       if (activePanel === 'classroom') {
-        const finalScore = isCorrect ? score + 1 : score;
         submitClassroomAttempt(finalScore);
+      }
+      const sharedId = searchParams.get('shared');
+      if (sharedId) {
+        recordShareAttempt(sharedId, finalScore, questions.length);
       }
       setAppState('results');
     }
@@ -455,6 +469,21 @@ Keep language concise and student friendly.`;
     localStorage.setItem(STORAGE_SHARED_KEY, JSON.stringify(store));
     const link = `${window.location.origin}/quiz?shared=${id}`;
     setShareLink(link);
+  };
+
+  const recordShareAttempt = (sharedId, finalScore, totalQuestions) => {
+    const name = studentName || user?.name || 'Guest';
+    const entry = {
+      id: crypto.randomUUID(),
+      name,
+      score: finalScore,
+      total: totalQuestions,
+      at: new Date().toISOString()
+    };
+    setShareAttempts((prev) => {
+      const existing = prev[sharedId] || [];
+      return { ...prev, [sharedId]: [...existing, entry] };
+    });
   };
 
   const createClassroom = () => {
