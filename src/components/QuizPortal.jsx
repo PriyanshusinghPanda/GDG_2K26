@@ -574,6 +574,8 @@ Keep language concise and student friendly.`;
 
   if (appState === 'idle') {
     const userHistory = history.filter((item) => item.userEmail === user?.email);
+    const sharedId = searchParams.get('shared');
+    const leaderboard = sharedId ? (shareAttempts[sharedId] || []).slice().sort((a, b) => b.score - a.score) : [];
     return (
       <div className="quiz-container">
         <div className="auth-row">
@@ -589,6 +591,21 @@ Keep language concise and student friendly.`;
           <div className="dash-item"><strong>{streak}</strong><span>Day streak</span></div>
           <div className="dash-item"><strong>{Math.round((userHistory.reduce((acc, q) => acc + (q.score / q.questionCount) * 100, 0) / (userHistory.length || 1)) || 0)}%</strong><span>Avg score</span></div>
         </div>
+        <div className="panel-row">
+          {['studio', 'review', 'analytics', 'classroom', 'sharing'].map((panel) => (
+            <button key={panel} className={activePanel === panel ? 'mode-btn active' : 'mode-btn'} onClick={() => setActivePanel(panel)}>
+              {panel}
+            </button>
+          ))}
+        </div>
+        <input
+          className="quiz-input"
+          placeholder="Your display name (for share/classroom leaderboard)"
+          value={studentName}
+          onChange={(e) => setStudentName(e.target.value)}
+        />
+        {activePanel === 'studio' && (
+          <>
         <div className="modes-row">
           {['text', 'url', 'youtube', 'file'].map((mode) => (
             <button key={mode} className={sourceMode === mode ? 'mode-btn active' : 'mode-btn'} onClick={() => setSourceMode(mode)}>
@@ -663,6 +680,57 @@ Keep language concise and student friendly.`;
             </div>
           ))}
         </div>
+          </>
+        )}
+        {activePanel === 'review' && (
+          <div className="history-list">
+            <div className="history-item">
+              <span>Due Today</span>
+              <span>{dueReviewCards.length} cards</span>
+              <button onClick={startDueReviewSession} className="mini-btn">Start</button>
+            </div>
+          </div>
+        )}
+        {activePanel === 'analytics' && (
+          <div className="history-list">
+            {weakTopicStats.slice(0, 8).map((row) => (
+              <div key={row.topic} className="history-item">
+                <span>{row.topic}</span>
+                <span>{Math.round(row.missRate * 100)}%</span>
+                <span>{row.wrongCount}/{row.totalSeen}</span>
+              </div>
+            ))}
+          </div>
+        )}
+        {activePanel === 'classroom' && (
+          <div className="history-list">
+            <button onClick={createClassroom} className="ghost-btn">Create Classroom From Current Quiz</button>
+            <input className="quiz-input" value={classroomCode} onChange={(e) => setClassroomCode(e.target.value)} placeholder="Enter classroom code" />
+            <button onClick={joinClassroom} className="quiz-btn">Join Classroom</button>
+            {activeClassroom && (
+              <div className="history-item">
+                <span>Room {activeClassroom.code}</span>
+                <span>{(classrooms.find((c) => c.code === activeClassroom.code)?.attempts || []).length} attempts</span>
+                <button onClick={exportClassroomCsv} className="mini-btn">Export CSV</button>
+              </div>
+            )}
+          </div>
+        )}
+        {activePanel === 'sharing' && (
+          <div className="history-list">
+            {sharedId ? (
+              leaderboard.slice(0, 10).map((row) => (
+                <div key={row.id} className="history-item">
+                  <span>{row.name}</span>
+                  <span>{row.score}/{row.total}</span>
+                  <span>{formatDate(row.at)}</span>
+                </div>
+              ))
+            ) : (
+              <p>Create or open a shared quiz link to see leaderboard data.</p>
+            )}
+          </div>
+        )}
       </div>
     );
   }
