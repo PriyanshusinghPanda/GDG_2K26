@@ -441,6 +441,27 @@ Keep language concise and student friendly.`;
     generateQuiz(latestWithWrong.wrongQuestions);
   };
 
+  const startTopicFocusedRetry = () => {
+    const topWeak = weakTopicStats[0];
+    if (!topWeak) {
+      setErrorMsg('No weak-topic data available yet.');
+      return;
+    }
+    const [weakSubject, weakType] = topWeak.topic.split(' / ');
+    const myAttempts = history.filter((item) => item.userEmail === user?.email && item.subject === weakSubject);
+    const targeted = [];
+    myAttempts.forEach((attempt) => {
+      (attempt.wrongQuestions || []).forEach((q) => {
+        if ((q.type || 'mcq') === weakType) targeted.push(q);
+      });
+    });
+    if (!targeted.length) {
+      setErrorMsg('Could not build a focused retry set yet.');
+      return;
+    }
+    generateQuiz(targeted.slice(0, Math.max(5, questionCount)));
+  };
+
   const signIn = () => {
     const email = window.prompt('Enter your Google email');
     if (!email) return;
@@ -705,6 +726,7 @@ Keep language concise and student friendly.`;
         )}
         {activePanel === 'analytics' && (
           <div className="history-list">
+            <button onClick={startTopicFocusedRetry} className="ghost-btn">Auto Retry Most-Missed Topic</button>
             {weakTopicStats.slice(0, 8).map((row) => (
               <div key={row.topic} className="history-item">
                 <span>{row.topic}</span>
