@@ -507,6 +507,39 @@ Keep language concise and student friendly.`;
     });
   };
 
+  const duplicateSharedQuizToDashboard = () => {
+    const sharedId = searchParams.get('shared');
+    if (!sharedId) {
+      setErrorMsg('Open a shared quiz first.');
+      return;
+    }
+    const raw = localStorage.getItem(STORAGE_SHARED_KEY);
+    const store = raw ? JSON.parse(raw) : {};
+    const sharedQuiz = store[sharedId];
+    if (!sharedQuiz) {
+      setErrorMsg('Shared quiz not found.');
+      return;
+    }
+    const copied = {
+      id: crypto.randomUUID(),
+      userEmail: user?.email || 'guest@local',
+      subject: `${sharedQuiz.subject || 'Shared Quiz'} (Copy)`,
+      sourceMode: 'shared',
+      difficulty: 'mixed',
+      questionCount: (sharedQuiz.questions || []).length,
+      score: 0,
+      wrongQuestionIds: [],
+      wrongQuestions: [],
+      questions: sharedQuiz.questions || [],
+      date: getToday(),
+      createdAt: new Date().toISOString()
+    };
+    const nextHistory = [copied, ...history];
+    setHistory(nextHistory);
+    localStorage.setItem(STORAGE_HISTORY_KEY, JSON.stringify(nextHistory));
+    setErrorMsg('Shared quiz copied to your dashboard history.');
+  };
+
   const createClassroom = () => {
     if (!questions.length) {
       setErrorMsg('Generate a quiz first, then create a classroom.');
@@ -752,6 +785,7 @@ Keep language concise and student friendly.`;
         )}
         {activePanel === 'sharing' && (
           <div className="history-list">
+            <button onClick={duplicateSharedQuizToDashboard} className="ghost-btn">Duplicate Shared Quiz To Dashboard</button>
             {sharedId ? (
               leaderboard.slice(0, 10).map((row) => (
                 <div key={row.id} className="history-item">
