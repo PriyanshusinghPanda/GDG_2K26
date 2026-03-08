@@ -689,6 +689,18 @@ Keep language concise and student friendly.`;
               <span>{dueReviewCards.length} cards</span>
               <button onClick={startDueReviewSession} className="mini-btn">Start</button>
             </div>
+            {dueReviewCards.slice(0, 8).map((card) => (
+              <div key={card.id} className="history-item">
+                <span>{card.subject}</span>
+                <span>Ease {card.ease?.toFixed(2)}</span>
+                <span className="ratings-inline">
+                  <button onClick={() => rateReviewCard(card.id, 'again')} className="mini-btn">Again</button>
+                  <button onClick={() => rateReviewCard(card.id, 'hard')} className="mini-btn">Hard</button>
+                  <button onClick={() => rateReviewCard(card.id, 'good')} className="mini-btn">Good</button>
+                  <button onClick={() => rateReviewCard(card.id, 'easy')} className="mini-btn">Easy</button>
+                </span>
+              </div>
+            ))}
           </div>
         )}
         {activePanel === 'analytics' && (
