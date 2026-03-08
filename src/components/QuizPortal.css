@@ -82,6 +82,12 @@
     gap: 0.5rem;
     margin-bottom: 0.8rem;
 }
+.panel-row {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 0.45rem;
+    margin-bottom: 0.8rem;
+}
 .mode-btn {
     padding: 0.6rem;
     border: 1px solid var(--border-color);
@@ -123,6 +129,10 @@
     padding: 0.45rem 0.6rem;
     font-size: 0.85rem;
 }
+.ratings-inline {
+    display: flex;
+    gap: 0.3rem;
+}
 .error-text {
     color: #c5221f;
     margin: 0.25rem 0 0.75rem;
@@ -137,6 +147,9 @@
         grid-template-columns: 1fr;
     }
     .modes-row {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .panel-row {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
     .controls-row {
