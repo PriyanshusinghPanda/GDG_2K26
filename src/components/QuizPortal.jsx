@@ -165,6 +165,19 @@ export default function QuizPortal() {
   }, [shareAttempts]);
 
   useEffect(() => {
+    const onStorage = (event) => {
+      if (event.key === STORAGE_CLASSROOM_KEY && event.newValue) {
+        setClassrooms(JSON.parse(event.newValue));
+      }
+      if (event.key === STORAGE_SHARE_ATTEMPTS_KEY && event.newValue) {
+        setShareAttempts(JSON.parse(event.newValue));
+      }
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, []);
+
+  useEffect(() => {
     if (appState !== 'quiz') return undefined;
     if (timeLeft <= 0) {
       handleAnswerClick('__timeout__');
