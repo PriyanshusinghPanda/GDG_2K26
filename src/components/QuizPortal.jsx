@@ -794,11 +794,23 @@ Keep language concise and student friendly.`;
                 <button onClick={exportClassroomCsv} className="mini-btn">Export CSV</button>
               </div>
             )}
+            {activeClassroom && (classrooms.find((c) => c.code === activeClassroom.code)?.attempts || [])
+              .slice()
+              .sort((a, b) => b.score - a.score)
+              .slice(0, 10)
+              .map((entry) => (
+                <div key={entry.id} className="history-item">
+                  <span>{entry.name}</span>
+                  <span>{entry.score}/{entry.total}</span>
+                  <span>{formatDate(entry.at)}</span>
+                </div>
+              ))}
           </div>
         )}
         {activePanel === 'sharing' && (
           <div className="history-list">
             <button onClick={duplicateSharedQuizToDashboard} className="ghost-btn">Duplicate Shared Quiz To Dashboard</button>
+            {sharedId && <p>Attempts: {leaderboard.length}</p>}
             {sharedId ? (
               leaderboard.slice(0, 10).map((row) => (
                 <div key={row.id} className="history-item">
