@@ -141,6 +141,16 @@
     font-weight: 700;
     color: #c5221f;
 }
+.extract-preview {
+    white-space: pre-wrap;
+    max-height: 180px;
+    overflow: auto;
+    border: 1px solid var(--border-color);
+    padding: 0.6rem;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    margin-bottom: 0.8rem;
+}
 
 @media (max-width: 640px) {
     .dashboard-grid {

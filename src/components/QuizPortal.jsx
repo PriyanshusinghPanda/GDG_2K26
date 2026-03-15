@@ -105,6 +105,7 @@ export default function QuizPortal() {
   const [history, setHistory] = useState([]);
   const [reviewCards, setReviewCards] = useState([]);
   const [shareLink, setShareLink] = useState('');
+  const [extractedPreview, setExtractedPreview] = useState('');
   const [activePanel, setActivePanel] = useState('studio');
   const [classrooms, setClassrooms] = useState([]);
   const [classroomCode, setClassroomCode] = useState('');
@@ -269,12 +270,14 @@ export default function QuizPortal() {
     }
     if (file.type === 'application/pdf' || file.type.startsWith('image/')) {
       const parsed = await parseWithGeminiDocument(file, apiKey);
-      return `Title: ${parsed.title}
+      const structured = `Title: ${parsed.title}
 Summary: ${parsed.summary}
 Headings: ${(parsed.headings || []).join(', ')}
 Key Terms: ${(parsed.keyTerms || []).join(', ')}
 Facts:
 ${(parsed.facts || []).map((fact, idx) => `${idx + 1}. ${fact}`).join('\n')}`;
+      setExtractedPreview(structured);
+      return structured;
     }
     return `Uploaded file: ${file.name}`;
   };
@@ -705,6 +708,7 @@ Keep language concise and student friendly.`;
             className="quiz-input"
           />
         )}
+        {sourceMode === 'file' && extractedPreview && <pre className="extract-preview">{extractedPreview}</pre>}
         <div className="controls-row">
           <input className="quiz-input" value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="Subject folder (e.g. Physics)" />
           <select className="quiz-input" value={difficulty} onChange={(e) => setDifficulty(e.target.value)}>
