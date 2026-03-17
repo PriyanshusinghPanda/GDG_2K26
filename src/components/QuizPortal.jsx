@@ -78,6 +78,9 @@ Make it faithful to source text.`;
   });
 
   const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data?.error?.message || 'OCR request failed');
+  }
   const textResponse = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
   const cleanJson = textResponse.replace(/```json/g, '').replace(/```/g, '').trim();
   return JSON.parse(cleanJson);
@@ -353,7 +356,13 @@ Keep language concise and student friendly.`;
         })
       });
       const data = await response.json();
-      const textResponse = data.candidates[0].content.parts[0].text;
+      if (!response.ok) {
+        throw new Error(data?.error?.message || 'Quiz generation failed');
+      }
+      const textResponse = data.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (!textResponse) {
+        throw new Error('Empty model response');
+      }
         const cleanJson = textResponse.replace(/```json/g, '').replace(/```/g, '').trim();
         parsedQuestions = JSON.parse(cleanJson);
         if (!Array.isArray(parsedQuestions) || !parsedQuestions.length) {
@@ -371,7 +380,7 @@ Keep language concise and student friendly.`;
       setAppState('quiz');
     } catch (error) {
       console.error('Error generating quiz:', error);
-      setErrorMsg('Failed to generate quiz. Check API key and try again.');
+      setErrorMsg(`Failed to generate quiz. ${error.message || 'Please try again.'}`);
       setAppState('idle');
     }
   };
@@ -594,12 +603,14 @@ Keep language concise and student friendly.`;
   };
 
   const joinClassroom = () => {
-    const room = classrooms.find((c) => c.code === classroomCode.trim().toUpperCase());
+    const normalizedCode = classroomCode.trim().toUpperCase();
+    const room = classrooms.find((c) => c.code === normalizedCode);
     if (!room) {
       setErrorMsg('Classroom code not found.');
       return;
     }
     setActiveClassroom(room);
+    setClassroomCode(normalizedCode);
     setQuestions(room.questions);
     setScore(0);
     setCurrentQuestionIndex(0);
