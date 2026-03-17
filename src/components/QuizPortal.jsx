@@ -112,6 +112,7 @@ export default function QuizPortal() {
   const [studentName, setStudentName] = useState('');
   const [activeClassroom, setActiveClassroom] = useState(null);
   const [shareAttempts, setShareAttempts] = useState({});
+  const [classroomLink, setClassroomLink] = useState('');
   const [searchParams] = useSearchParams();
 
   useEffect(() => {
@@ -573,6 +574,7 @@ Keep language concise and student friendly.`;
     setClassrooms((prev) => [room, ...prev]);
     setActiveClassroom(room);
     setClassroomCode(code);
+    setClassroomLink(`${window.location.origin}/quiz?classroom=${code}`);
   };
 
   const joinClassroom = () => {
@@ -620,6 +622,16 @@ Keep language concise and student friendly.`;
     a.click();
     a.remove();
     URL.revokeObjectURL(url);
+  };
+
+  const copyClassroomLink = async () => {
+    if (!classroomLink) return;
+    try {
+      await navigator.clipboard.writeText(classroomLink);
+      setErrorMsg('Classroom link copied.');
+    } catch {
+      setErrorMsg('Could not copy classroom link.');
+    }
   };
 
   const copyShareLink = async () => {
@@ -789,6 +801,12 @@ Keep language concise and student friendly.`;
         {activePanel === 'classroom' && (
           <div className="history-list">
             <button onClick={createClassroom} className="ghost-btn">Create Classroom From Current Quiz</button>
+            {classroomLink && (
+              <>
+                <a href={classroomLink}>{classroomLink}</a>
+                <button onClick={copyClassroomLink} className="mini-btn">Copy Classroom Link</button>
+              </>
+            )}
             <input className="quiz-input" value={classroomCode} onChange={(e) => setClassroomCode(e.target.value)} placeholder="Enter classroom code" />
             <button onClick={joinClassroom} className="quiz-btn">Join Classroom</button>
             {activeClassroom && (
