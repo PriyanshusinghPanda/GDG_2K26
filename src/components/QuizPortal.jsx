@@ -264,6 +264,22 @@ export default function QuizPortal() {
       .sort((a, b) => b.missRate - a.missRate);
   }, [history, user]);
 
+  const dailyTrend = useMemo(() => {
+    const byDate = {};
+    history
+      .filter((item) => item.userEmail === user?.email)
+      .forEach((item) => {
+        const date = item.date || getToday();
+        if (!byDate[date]) byDate[date] = { totalPct: 0, count: 0 };
+        byDate[date].totalPct += (item.score / Math.max(item.questionCount, 1)) * 100;
+        byDate[date].count += 1;
+      });
+    return Object.entries(byDate)
+      .map(([date, value]) => ({ date, avgPct: Math.round(value.totalPct / value.count) }))
+      .sort((a, b) => a.date.localeCompare(b.date))
+      .slice(-10);
+  }, [history, user]);
+
   const parseFileContent = async (file, apiKey) => {
     if (!file) return '';
     if (file.type.includes('text') || file.name.endsWith('.md')) {
@@ -789,6 +805,13 @@ Keep language concise and student friendly.`;
         {activePanel === 'analytics' && (
           <div className="history-list">
             <button onClick={startTopicFocusedRetry} className="ghost-btn">Auto Retry Most-Missed Topic</button>
+            {dailyTrend.map((row) => (
+              <div key={row.date} className="history-item">
+                <span>Daily Avg</span>
+                <span>{row.avgPct}%</span>
+                <span>{row.date}</span>
+              </div>
+            ))}
             {weakTopicStats.slice(0, 8).map((row) => (
               <div key={row.topic} className="history-item">
                 <span>{row.topic}</span>
